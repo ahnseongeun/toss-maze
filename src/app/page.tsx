@@ -500,10 +500,6 @@ export default function TossMazeRace() {
                 ref={canvasRef}
                 className="bg-white rounded-lg shadow-md border border-gray-200"
               />
-              {/* 모바일 화면에서는 순위표가 작게 아래에 나오거나 오버레이 될 수 있으므로, 하단에 간단히 상태 표시 */}
-              <div className="absolute bottom-4 bg-gray-900/80 backdrop-blur-sm text-white px-5 py-2 rounded-full shadow-lg font-medium animate-pulse text-sm">
-                치열한 경주 진행 중... 👀
-              </div>
             </div>
           )}
 
