@@ -464,7 +464,7 @@ export default function TossMazeRace() {
               showFullScreenAd({
                 options: { adGroupId: TOSS_AD_FULLSCREEN_ID },
                 onEvent: (e) => {
-                  if (e.type === "closed" || e.type === "rewarded") {
+                  if (e.type === "dismissed" || e.type === "failedToShow" || e.type === "userEarnedReward") {
                     setView("input");
                     setPenaltyCount(1);
                   }
