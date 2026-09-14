@@ -37,6 +37,7 @@ export default function TossMazeRace() {
   const [playerPositions, setPlayerPositions] = useState<{ x: number; y: number }[]>([]);
   const [ranks, setRanks] = useState<number[]>([]); 
   const [leaderboard, setLeaderboard] = useState<{id: number, time: number}[]>([]);
+  const [penaltyCount, setPenaltyCount] = useState(1);
   const [isSlowMotion, setIsSlowMotion] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -61,7 +62,13 @@ export default function TossMazeRace() {
   };
 
   const removePlayer = (id: number) => {
-    setPlayers(players.filter((p) => p.id !== id));
+    setPlayers((prev) => {
+      const next = prev.filter((p) => p.id !== id);
+      if (penaltyCount > next.length - 1 && next.length >= 2) {
+        setPenaltyCount(next.length - 1);
+      }
+      return next;
+    });
   };
 
   const startRace = () => {
@@ -69,6 +76,8 @@ export default function TossMazeRace() {
       alert("최소 2명의 참가자가 필요합니다.");
       return;
     }
+    const finalPenaltyCount = Math.min(Math.max(1, penaltyCount), players.length - 1);
+    setPenaltyCount(finalPenaltyCount);
     generateMazeAndPaths();
     setLeaderboard([]);
     finishedPlayersRef.current = [];
@@ -226,12 +235,11 @@ export default function TossMazeRace() {
     const durationsByRank = new Array(players.length);
     for (let i = 0; i < players.length; i++) {
        if (i === 0) {
-          durationsByRank[i] = 10000 + Math.random() * 1000; // 1등은 10~11초
-       } else if (i === players.length - 1) {
-          // 꼴찌는 뒤에서 두번째 사람보다 정확히 0.05초(50ms) 늦게 들어오도록 설정
+          durationsByRank[i] = 10000 + Math.random() * 1000; 
+       } else if (i === players.length - penaltyCount) {
+          // 💡 생존 턱걸이(마지막 안전권)와 첫 당첨자 사이를 0.05초(50ms) 차이로 만들어 극적 연출!
           durationsByRank[i] = durationsByRank[i-1] + 50; 
        } else {
-          // 중간 등수들은 1.5초 간격으로 무작위 배분
           durationsByRank[i] = durationsByRank[i-1] + 1500 + Math.random() * 1000;
        }
     }
@@ -251,14 +259,19 @@ export default function TossMazeRace() {
          if (virtualTime < durations[i]) runningCount++;
       });
 
-      // 2명 이하 남았고, 꼴찌 앞사람(뒤에서 2등)의 도착 시간이 1초(1000ms) 이내로 남았을 때 슬로우 모션
+      // 생존자가 모두 도착했고, 꼴찌 그룹(당첨자들)의 첫 번째 사람 도착이 1초(1000ms) 이내로 남았을 때 슬로우 모션 발동!
       let shouldSlowMotion = false;
       if (players.length >= 2) {
-         const secondToLastId = ranks[ranks.length - 2];
-         const secondToLastIndex = players.findIndex(p => p.id === secondToLastId);
-         const secondToLastDuration = durations[secondToLastIndex];
-         
-         shouldSlowMotion = runningCount <= 2 && virtualTime >= secondToLastDuration - 1000;
+         // 마지막 안전권 참가자의 ID
+         const lastSafeId = ranks[ranks.length - penaltyCount - 1];
+         // (주의: penaltyCount가 players.length와 같다면 lastSafeId가 undefined 될 수 있으나 UI에서 제한됨)
+         if (lastSafeId) {
+           const lastSafeIndex = players.findIndex(p => p.id === lastSafeId);
+           const lastSafeDuration = durations[lastSafeIndex];
+           
+           // 현재 남은 러너가 '안전권 1명 + 당첨자들' 일 때부터 슬로우 모션
+           shouldSlowMotion = runningCount <= penaltyCount + 1 && virtualTime >= lastSafeDuration - 1000;
+         }
       }
       
       let speedFactor = 1.0;
@@ -399,14 +412,14 @@ export default function TossMazeRace() {
       ctx.textBaseline = "middle";
       ctx.fillText(p.emoji, px, py);
 
-      ctx.font = `bold ${cellSize * 0.25}px sans-serif`;
+      ctx.font = `bold ${cellSize * 0.45}px sans-serif`;
       const text = p.name;
       const textWidth = ctx.measureText(text).width;
-      const tagY = py - cellSize * 0.65;
+      const tagY = py - cellSize * 0.75;
       
       ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
       ctx.beginPath();
-      ctx.roundRect(px - textWidth / 2 - 6, tagY - cellSize * 0.2 - 2, textWidth + 12, cellSize * 0.4 + 4, 4);
+      ctx.roundRect(px - textWidth / 2 - 8, tagY - cellSize * 0.25 - 2, textWidth + 16, cellSize * 0.5 + 4, 6);
       ctx.fill();
 
       ctx.fillStyle = "white";
@@ -435,6 +448,24 @@ export default function TossMazeRace() {
           {view === "input" && (
             <div className="p-6 flex-1 flex flex-col bg-white">
               <h2 className="text-lg font-bold mb-4 text-gray-900">누가 낼래? (최대 10명)</h2>
+              
+              <div className="mb-6 bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
+                <label className="block text-sm font-bold text-gray-800 mb-2">당첨자(결제자) 수: <span className="text-red-500 font-black">{penaltyCount}명</span></label>
+                <input
+                  type="range"
+                  min="1"
+                  max={Math.max(1, players.length - 1)}
+                  value={penaltyCount}
+                  onChange={(e) => setPenaltyCount(parseInt(e.target.value))}
+                  disabled={players.length < 2}
+                  className="w-full accent-gray-900 cursor-pointer"
+                />
+                <div className="flex justify-between text-xs text-gray-500 font-medium px-1 mt-1">
+                  <span>1명</span>
+                  <span>{Math.max(1, players.length - 1)}명</span>
+                </div>
+              </div>
+
               <div className="flex gap-2 mb-6">
                 <input
                   type="text"
@@ -513,7 +544,7 @@ export default function TossMazeRace() {
               <div className="w-full max-w-sm space-y-4 mb-8 text-black">
                 {ranks.map((id, index) => {
                   const p = players.find((p) => p.id === id)!;
-                  const isLoser = index === ranks.length - 1;
+                  const isLoser = index >= ranks.length - penaltyCount;
                   // Get recorded time from leaderboard if available
                   const record = leaderboard.find(l => l.id === p.id);
                   const timeStr = record ? record.time.toFixed(2) + "초" : "-";
