@@ -438,6 +438,7 @@ export default function TossMazeRace() {
   useEffect(() => {
     // 뷰가 input이나 result일 때 하단 배너 노출
     if (view === "input" || view === "result") {
+      if (!TOSS_AD_BANNER_ID || TOSS_AD_BANNER_ID === "TEST_BANNER_ID") return;
       try {
         if (typeof TossAds !== "undefined" && TossAds.attachBanner.isSupported()) {
           TossAds.attachBanner(TOSS_AD_BANNER_ID, "#toss-ad-banner");
@@ -455,6 +456,12 @@ export default function TossMazeRace() {
   };
 
   const handlePlayAgain = () => {
+    if (!TOSS_AD_FULLSCREEN_ID || TOSS_AD_FULLSCREEN_ID === "TEST_FULLSCREEN_ID") {
+      setView("input");
+      setPenaltyCount(1);
+      return;
+    }
+
     try {
       if (typeof loadFullScreenAd !== "undefined" && loadFullScreenAd.isSupported()) {
         loadFullScreenAd({
@@ -655,9 +662,8 @@ export default function TossMazeRace() {
           )}
 
           {/* 하단 배너 광고 영역 (대기실, 결과 화면에서 노출) */}
-          {(view === "input" || view === "result") && (
+          {(view === "input" || view === "result") && TOSS_AD_BANNER_ID && TOSS_AD_BANNER_ID !== "TEST_BANNER_ID" && (
             <div id="toss-ad-banner" className="w-full shrink-0 flex items-center justify-center min-h-[60px] bg-gray-50 border-t border-gray-200">
-              <span className="text-gray-400 text-xs">광고가 표시되는 영역입니다</span>
             </div>
           )}
         </div>
