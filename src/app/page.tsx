@@ -49,6 +49,29 @@ export default function TossMazeRace() {
   const animationRef = useRef<number | null>(null);
   const finishedPlayersRef = useRef<{id: number, time: number}[]>([]);
 
+  // 브라우저/기기 뒤로가기 처리를 위한 상태 동기화
+  useEffect(() => {
+    window.history.replaceState({ view: "input" }, "");
+    const handlePopState = (e: PopStateEvent) => {
+      if (e.state && e.state.view) {
+        setView(e.state.view);
+      } else {
+        setView("input");
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const changeView = (newView: ViewState, replace: boolean = false) => {
+    if (replace) {
+      window.history.replaceState({ view: newView }, "");
+    } else {
+      window.history.pushState({ view: newView }, "");
+    }
+    setView(newView);
+  };
+
   const addPlayer = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim() || players.length >= 10) return;
@@ -87,7 +110,7 @@ export default function TossMazeRace() {
     setLeaderboard([]);
     finishedPlayersRef.current = [];
     setIsSlowMotion(false);
-    setView("race");
+    changeView("race");
   };
 
   const generateMazeAndPaths = () => {
@@ -329,7 +352,7 @@ export default function TossMazeRace() {
       }
 
       if (allFinished) {
-        setTimeout(() => setView("result"), 2000); // 모두 들어오고 여운을 위해 2초 대기
+        setTimeout(() => changeView("result", true), 2000); // 모두 들어오고 여운을 위해 2초 대기
       } else {
         animationRef.current = requestAnimationFrame(animate);
       }
@@ -457,7 +480,7 @@ export default function TossMazeRace() {
 
   const handlePlayAgain = () => {
     if (!TOSS_AD_FULLSCREEN_ID || TOSS_AD_FULLSCREEN_ID === "TEST_FULLSCREEN_ID") {
-      setView("input");
+      changeView("input", true);
       setPenaltyCount(1);
       return;
     }
@@ -472,12 +495,12 @@ export default function TossMazeRace() {
                 options: { adGroupId: TOSS_AD_FULLSCREEN_ID },
                 onEvent: (e) => {
                   if (e.type === "dismissed" || e.type === "failedToShow" || e.type === "userEarnedReward") {
-                    setView("input");
+                    changeView("input", true);
                     setPenaltyCount(1);
                   }
                 },
                 onError: () => {
-                  setView("input");
+                  changeView("input", true);
                   setPenaltyCount(1);
                 }
               });
@@ -485,7 +508,7 @@ export default function TossMazeRace() {
           },
           onError: (e) => {
             console.warn("Full screen ad load failed", e);
-            setView("input");
+            changeView("input", true);
             setPenaltyCount(1);
           }
         });
@@ -496,7 +519,7 @@ export default function TossMazeRace() {
     }
     
     // 광고가 지원되지 않거나 에러 시 바로 넘김
-    setView("input");
+    changeView("input", true);
     setPenaltyCount(1);
   };
 
