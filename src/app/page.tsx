@@ -589,7 +589,10 @@ export default function TossMazeRace() {
               </div>
 
               <button
-                onClick={() => setView("input")}
+                onClick={() => {
+                  setView("input");
+                  setPenaltyCount(1);
+                }}
                 className="w-full max-w-sm bg-gray-900 text-white py-4 rounded-xl font-bold text-lg hover:bg-black transition active:scale-95 shadow-md shrink-0"
               >
                 다시 하기
