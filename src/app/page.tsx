@@ -264,13 +264,15 @@ export default function TossMazeRace() {
       if (players.length >= 2) {
          // 마지막 안전권 참가자의 ID
          const lastSafeId = ranks[ranks.length - penaltyCount - 1];
-         // (주의: penaltyCount가 players.length와 같다면 lastSafeId가 undefined 될 수 있으나 UI에서 제한됨)
          if (lastSafeId) {
            const lastSafeIndex = players.findIndex(p => p.id === lastSafeId);
            const lastSafeDuration = durations[lastSafeIndex];
            
-           // 현재 남은 러너가 '안전권 1명 + 당첨자들' 일 때부터 슬로우 모션
-           shouldSlowMotion = runningCount <= penaltyCount + 1 && virtualTime >= lastSafeDuration - 1000;
+           // 운명의 순간(안전권 마지막 사람과 첫 당첨자가 갈리는 0.05초 구간) 전후로만 슬로우 모션 발동
+           // 마지막 안전권 참가자 도착 1초 전부터 ~ 첫 당첨자(0.05초 후 도착) 도착 후 0.2초까지만 발동
+           if (virtualTime >= lastSafeDuration - 1000 && virtualTime <= lastSafeDuration + 200) {
+             shouldSlowMotion = true;
+           }
          }
       }
       
@@ -449,20 +451,26 @@ export default function TossMazeRace() {
             <div className="p-6 flex-1 flex flex-col bg-white">
               <h2 className="text-lg font-bold mb-4 text-gray-900">누가 낼래? (최대 10명)</h2>
               
-              <div className="mb-6 bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
-                <label className="block text-sm font-bold text-gray-800 mb-2">당첨자(결제자) 수: <span className="text-red-500 font-black">{penaltyCount}명</span></label>
-                <input
-                  type="range"
-                  min="1"
-                  max={Math.max(1, players.length - 1)}
-                  value={penaltyCount}
-                  onChange={(e) => setPenaltyCount(parseInt(e.target.value))}
-                  disabled={players.length < 2}
-                  className="w-full accent-gray-900 cursor-pointer"
-                />
-                <div className="flex justify-between text-xs text-gray-500 font-medium px-1 mt-1">
-                  <span>1명</span>
-                  <span>{Math.max(1, players.length - 1)}명</span>
+              <div className="mb-6 bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+                <label className="text-sm font-bold text-gray-800">당첨자(결제자) 수</label>
+                <div className="flex items-center gap-4">
+                  <button 
+                    type="button" 
+                    onClick={() => setPenaltyCount(Math.max(1, penaltyCount - 1))}
+                    disabled={penaltyCount <= 1}
+                    className="w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-gray-300 text-gray-800 font-bold text-xl hover:bg-gray-100 disabled:opacity-30 transition"
+                  >
+                    -
+                  </button>
+                  <span className="text-xl font-black text-red-500 w-8 text-center">{penaltyCount}</span>
+                  <button 
+                    type="button" 
+                    onClick={() => setPenaltyCount(Math.min(Math.max(1, players.length - 1), penaltyCount + 1))}
+                    disabled={players.length < 2 || penaltyCount >= players.length - 1}
+                    className="w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-gray-300 text-gray-800 font-bold text-xl hover:bg-gray-100 disabled:opacity-30 transition"
+                  >
+                    +
+                  </button>
                 </div>
               </div>
 
