@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { TossAds, loadFullScreenAd, showFullScreenAd } from '@apps-in-toss/web-framework';
+import { TossAds, loadFullScreenAd, showFullScreenAd, graniteEvent, Screen } from '@apps-in-toss/web-framework';
 
 // TODO: 토스에서 발급받은 실제 광고 ID(AdGroupId)로 변경해주세요.
 const TOSS_AD_BANNER_ID = "TEST_BANNER_ID"; 
@@ -49,18 +49,47 @@ export default function TossMazeRace() {
   const animationRef = useRef<number | null>(null);
   const finishedPlayersRef = useRef<{id: number, time: number}[]>([]);
 
-  // 브라우저/기기 뒤로가기 처리를 위한 상태 동기화
+  // 브라우저/기기 뒤로가기 처리를 위한 상태 동기화 (토스 미니앱 네이티브 대응)
   useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+    
+    // 1. 토스 미니앱 네이티브 뒤로가기 이벤트 구독
+    try {
+      if (typeof graniteEvent !== "undefined") {
+        unsubscribe = graniteEvent.addEventListener("backEvent", {
+          onEvent: () => {
+            setView((currentView) => {
+              if (currentView === "race" || currentView === "result") {
+                return "input"; // 경주나 결과 화면에선 대기실로 이동
+              } else {
+                // 대기실(첫 화면)일 땐 미니앱 종료
+                if (typeof Screen !== "undefined") {
+                  Screen.close().catch(() => {});
+                }
+                return "input";
+              }
+            });
+          }
+        });
+      }
+    } catch (e) {
+      console.warn("Toss backEvent not supported", e);
+    }
+
+    // 2. 일반 브라우저를 위한 폴백(popstate) 설정
     window.history.replaceState({ view: "input" }, "");
     const handlePopState = (e: PopStateEvent) => {
-      if (e.state && e.state.view) {
-        setView(e.state.view);
-      } else {
-        setView("input");
-      }
+      setView((currentView) => {
+        if (currentView === "race" || currentView === "result") return "input";
+        return currentView;
+      });
     };
     window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
+    
+    return () => {
+      if (unsubscribe) unsubscribe();
+      window.removeEventListener("popstate", handlePopState);
+    };
   }, []);
 
   const changeView = (newView: ViewState, replace: boolean = false) => {
