@@ -111,14 +111,28 @@ export default function TossMazeRace() {
   const handleOpenContacts = async () => {
     try {
       if (typeof Device !== 'undefined' && Device.getContacts) {
+        const currentPerm = await Device.getContacts.getPermission();
+        if (currentPerm !== 'granted') {
+          const newPerm = await Device.getContacts.openPermissionDialog();
+          if (newPerm !== 'granted') {
+            alert("연락처 접근 권한을 허용해야 친구를 불러올 수 있습니다.");
+            return;
+          }
+        }
+
         const response = await Device.getContacts({ size: 100, offset: 0 });
-        setContacts(response.result);
-        setShowContactsModal(true);
+        if (response && response.result) {
+          setContacts(response.result);
+          setShowContactsModal(true);
+        } else {
+          alert("연락처 목록이 비어있거나 불러오지 못했습니다.");
+        }
       } else {
         alert("연락처 연동은 토스 앱에서만 가능합니다.");
       }
-    } catch (e) {
-      console.warn("연락처 권한 거부됨", e);
+    } catch (e: any) {
+      alert("연락처를 불러오는 중 오류가 발생했습니다: " + (e?.message || "알 수 없는 오류"));
+      console.warn("연락처 불러오기 에러", e);
     }
   };
 
