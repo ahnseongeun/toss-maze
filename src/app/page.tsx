@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { TossAds, loadFullScreenAd, showFullScreenAd, graniteEvent, Screen, Share } from '@apps-in-toss/web-framework';
+import { TossAds, loadFullScreenAd, showFullScreenAd, graniteEvent, Screen, Share, Device, openURL } from '@apps-in-toss/web-framework';
 
 // TODO: 토스에서 발급받은 실제 광고 ID(AdGroupId)로 변경해주세요.
 const TOSS_AD_BANNER_ID = "TEST_BANNER_ID"; 
@@ -18,6 +18,7 @@ type Player = {
   name: string;
   emoji: string;
   color: string;
+  phoneNumber?: string;
 };
 
 type ViewState = "input" | "race" | "result";
@@ -47,6 +48,9 @@ export default function TossMazeRace() {
   
   const [totalAmount, setTotalAmount] = useState<number | "">("");
   const [payerId, setPayerId] = useState<number | null>(null);
+  
+  const [contacts, setContacts] = useState<{name: string, phoneNumber: string}[]>([]);
+  const [showContactsModal, setShowContactsModal] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | null>(null);
@@ -102,6 +106,40 @@ export default function TossMazeRace() {
       window.history.pushState({ view: newView }, "");
     }
     setView(newView);
+  };
+
+  const handleOpenContacts = async () => {
+    try {
+      if (typeof Device !== 'undefined' && Device.getContacts) {
+        const response = await Device.getContacts({ size: 100, offset: 0 });
+        setContacts(response.result);
+        setShowContactsModal(true);
+      } else {
+        alert("연락처 연동은 토스 앱에서만 가능합니다.");
+      }
+    } catch (e) {
+      console.warn("연락처 권한 거부됨", e);
+    }
+  };
+
+  const addPlayerFromContact = (contact: {name: string, phoneNumber: string}) => {
+    if (players.length >= 10) {
+      alert("최대 10명까지 참여 가능합니다.");
+      return;
+    }
+    const nextId = players.length > 0 ? Math.max(...players.map((p) => p.id)) + 1 : 1;
+    const nextIdx = players.length;
+    setPlayers(prev => [
+      ...prev,
+      {
+        id: nextId,
+        name: contact.name,
+        phoneNumber: contact.phoneNumber,
+        emoji: EMOJIS[nextIdx % EMOJIS.length],
+        color: COLORS[nextIdx % COLORS.length],
+      },
+    ]);
+    setShowContactsModal(false);
   };
 
   const addPlayer = (e: React.FormEvent) => {
@@ -526,14 +564,34 @@ export default function TossMazeRace() {
 
     const message = `[낼래말래 미로] 벌칙 당첨! 🎯\n\n당첨자: ${loserNames}\n\n결제자 '${payer.name}'님에게 각각 ${splitAmount.toLocaleString()}원씩 송금해주세요!💸\n👉 송금하기: https://toss.me/`;
 
-    try {
-      if (typeof Share !== "undefined") {
-        Share.sendMessage({ message }).catch(e => console.warn("Share failed", e));
-      } else {
-        alert(message);
+    const loserPhones = losers.map(l => l.phoneNumber).filter(phone => !!phone);
+    
+    if (loserPhones.length > 0) {
+      // 당첨자 중 전화번호가 있는 경우 다중 문자 메시지 앱 호출
+      const phoneString = loserPhones.join(',');
+      const encodedMessage = encodeURIComponent(message);
+      const smsLink = `sms:${phoneString}?body=${encodedMessage}`;
+      
+      try {
+        if (typeof openURL !== 'undefined') {
+          openURL(smsLink).catch(() => { window.location.href = smsLink; });
+        } else {
+          window.location.href = smsLink;
+        }
+      } catch (e) {
+        console.warn("SMS link failed", e);
       }
-    } catch (e) {
-      console.warn("Share error", e);
+    } else {
+      // 전화번호가 없으면 범용 카카오톡/메시지 공유 창 띄우기
+      try {
+        if (typeof Share !== "undefined") {
+          Share.sendMessage({ message }).catch(e => console.warn("Share failed", e));
+        } else {
+          alert(message);
+        }
+      } catch (e) {
+        console.warn("Share error", e);
+      }
     }
   };
 
@@ -594,11 +652,71 @@ export default function TossMazeRace() {
           </div>
 
           {view === "input" && (
-            <div className="p-6 flex-1 flex flex-col bg-white">
-              <h2 className="text-lg font-bold mb-4 text-gray-900">누가 낼래? (최대 10명)</h2>
+            <div className="p-6 flex-1 flex flex-col bg-white overflow-hidden">
+              <h2 className="text-lg font-bold mb-4 text-gray-900 shrink-0">누가 낼래? (최대 10명)</h2>
               
-              <div className="mb-6 bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
-                <label className="text-sm font-bold text-gray-800">당첨자(결제자) 수</label>
+              <div className="flex gap-2 mb-3 shrink-0">
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="이름 직접 입력"
+                  className="flex-1 border-2 border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:border-gray-900 text-gray-900 font-medium transition"
+                  maxLength={8}
+                />
+                <button
+                  type="button"
+                  onClick={addPlayer}
+                  disabled={players.length >= 10 || !newName.trim()}
+                  className="bg-gray-900 text-white px-6 py-3 rounded-lg font-bold disabled:opacity-30 transition hover:bg-black shadow-sm"
+                >
+                  추가
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleOpenContacts}
+                className="w-full bg-blue-50 text-blue-600 border border-blue-200 px-4 py-3 rounded-lg font-bold transition hover:bg-blue-100 flex items-center justify-center gap-2 mb-6 shrink-0"
+              >
+                👤 연락처에서 친구 불러오기
+              </button>
+
+              {players.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-gray-400 mb-6 font-medium bg-gray-50 rounded-xl border border-gray-100 min-h-[150px]">
+                  <span className="text-4xl mb-3">🤔</span>
+                  참가자를 추가해주세요!
+                </div>
+              ) : (
+                <ul className="flex-1 overflow-y-auto space-y-3 mb-6 text-black pr-2">
+                  {players.map((p) => (
+                    <li key={p.id} className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm transition hover:shadow-md">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-10 h-10 rounded-full flex items-center justify-center text-lg border border-gray-300 shadow-sm"
+                          style={{ backgroundColor: p.color }}
+                        >
+                          {p.emoji}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-gray-800">{p.name}</span>
+                          {p.phoneNumber && <span className="text-xs text-blue-500 font-bold">연락처 연동됨</span>}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => removePlayer(p.id)}
+                        className="text-red-500 hover:text-red-700 text-sm font-bold bg-red-50 px-3 py-1.5 rounded-md transition"
+                      >
+                        삭제
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <div className="mb-6 bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between shrink-0">
+                <label className="text-sm font-bold text-gray-800">당첨자 수 지정</label>
                 <div className="flex items-center gap-4">
                   <button 
                     type="button" 
@@ -619,55 +737,6 @@ export default function TossMazeRace() {
                   </button>
                 </div>
               </div>
-
-              <div className="flex gap-2 mb-6">
-                <input
-                  type="text"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="이름 입력 (예: 김토스)"
-                  className="flex-1 border-2 border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:border-gray-900 text-gray-900 font-medium transition"
-                  maxLength={8}
-                />
-                <button
-                  type="button"
-                  onClick={addPlayer}
-                  disabled={players.length >= 10 || !newName.trim()}
-                  className="bg-gray-900 text-white px-6 py-3 rounded-lg font-bold disabled:opacity-30 transition hover:bg-black shadow-sm"
-                >
-                  추가
-                </button>
-              </div>
-
-              {players.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-gray-400 mb-6 font-medium">
-                  <span className="text-4xl mb-3">🤔</span>
-                  참가자를 추가해주세요!
-                </div>
-              ) : (
-                <ul className="flex-1 overflow-y-auto space-y-3 mb-6 text-black pr-2">
-                  {players.map((p) => (
-                    <li key={p.id} className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm transition hover:shadow-md">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-10 h-10 rounded-full flex items-center justify-center text-lg border border-gray-300 shadow-sm"
-                          style={{ backgroundColor: p.color }}
-                        >
-                          {p.emoji}
-                        </div>
-                        <span className="font-bold text-gray-800">{p.name}</span>
-                      </div>
-                      <button
-                        onClick={() => removePlayer(p.id)}
-                        className="text-red-500 hover:text-red-700 text-sm font-bold bg-red-50 px-3 py-1.5 rounded-md transition"
-                      >
-                        삭제
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
 
               <button
                 onClick={startRace}
@@ -833,6 +902,38 @@ export default function TossMazeRace() {
           </div>
         )}
       </div>
+      
+      {/* 연락처 선택 모달 */}
+      {showContactsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm flex flex-col overflow-hidden max-h-[80vh] shadow-2xl">
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50 shrink-0">
+              <h3 className="font-bold text-lg text-gray-800">친구 선택하기</h3>
+              <button onClick={() => setShowContactsModal(false)} className="text-gray-500 hover:text-gray-900 font-bold p-2">✕</button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {contacts.length === 0 ? (
+                <div className="text-center text-gray-500 py-10">연락처를 불러오지 못했습니다.</div>
+              ) : (
+                contacts.map((contact, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => addPlayerFromContact(contact)}
+                    className="w-full text-left flex items-center justify-between p-4 rounded-xl border border-gray-200 hover:bg-blue-50 hover:border-blue-200 transition"
+                  >
+                    <div>
+                      <div className="font-bold text-gray-900 text-lg">{contact.name}</div>
+                      <div className="text-sm text-gray-500">{contact.phoneNumber}</div>
+                    </div>
+                    <div className="text-blue-500 font-black">+ 추가</div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
