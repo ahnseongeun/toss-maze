@@ -135,20 +135,38 @@ export default function TossMazeRace() {
         return;
       }
 
-      // 4. 권한이 확보되었으므로 연락처 가져오기 실행
-      const response = await Device.getContacts({ size: 100, offset: 0 });
-      
-      if (!response || !response.result) {
-        alert("응답에 연락처 데이터가 없습니다. (토스 콘솔에서 권한을 활성화했는지 확인해주세요)");
-        return;
+      // 4. 권한이 확보되었으므로 모든 연락처 가져오기 실행 (페이지네이션)
+      let allContacts: { name: string; phoneNumber: string; }[] = [];
+      let currentOffset: number | null = 0;
+      let isDone = false;
+
+      while (!isDone && currentOffset !== null) {
+        const fetchRes: any = await Device.getContacts({ size: 500, offset: currentOffset as number });
+        
+        if (!fetchRes || !fetchRes.result) {
+          if (allContacts.length === 0) {
+            alert("응답에 연락처 데이터가 없습니다. (토스 콘솔에서 권한을 활성화했는지 확인해주세요)");
+            return;
+          }
+          break;
+        }
+
+        allContacts = [...allContacts, ...fetchRes.result];
+
+        if (fetchRes.done || fetchRes.nextOffset === null || fetchRes.nextOffset === undefined) {
+          isDone = true;
+        } else {
+          currentOffset = fetchRes.nextOffset;
+        }
       }
 
-      if (Array.isArray(response.result) && response.result.length === 0) {
+      if (allContacts.length === 0) {
         alert("기기에 저장된 연락처가 없습니다.");
         return;
       }
 
-      setContacts(response.result);
+      // 5. 연락처 상태 업데이트 및 모달 열기
+      setContacts(allContacts);
       setShowContactsModal(true);
 
     } catch (e: any) {
