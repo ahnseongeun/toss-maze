@@ -973,10 +973,12 @@ export default function TossMazeRace() {
             {/* 연락처 리스트 (최대 5명 노출, 스크롤 영역 제한) */}
             <div className="overflow-y-auto p-3 bg-gray-50/50">
               {(() => {
-                const filtered = contacts.filter(c => 
-                  c.name.includes(contactSearch) || 
-                  (c.phoneNumber && c.phoneNumber.replace(/-/g, '').includes(contactSearch.replace(/-/g, '')))
-                );
+                const searchTxt = contactSearch.toLowerCase().replace(/\s+/g, ''); // 공백 제거 및 소문자화
+                const filtered = contacts.filter(c => {
+                  const nameMatch = c.name.toLowerCase().replace(/\s+/g, '').includes(searchTxt);
+                  const phoneMatch = c.phoneNumber && c.phoneNumber.replace(/[- ]/g, '').includes(searchTxt);
+                  return nameMatch || phoneMatch;
+                });
 
                 if (filtered.length === 0) {
                   return (
