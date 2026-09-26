@@ -23,8 +23,8 @@ type Player = {
 
 type ViewState = "input" | "race" | "result";
 
-const MAZE_WIDTH = 21;
-const MAZE_HEIGHT = 31;
+let MAZE_WIDTH = 21;
+let MAZE_HEIGHT = 31;
 
 const DIRS = [
   [0, -2],
@@ -177,10 +177,6 @@ export default function TossMazeRace() {
   };
 
   const addPlayerFromContact = (contact: {name: string, phoneNumber: string}) => {
-    if (players.length >= 10) {
-      alert("최대 10명까지 참여 가능합니다.");
-      return;
-    }
     const nextId = players.length > 0 ? Math.max(...players.map((p) => p.id)) + 1 : 1;
     const nextIdx = players.length;
     setPlayers(prev => [
@@ -198,7 +194,7 @@ export default function TossMazeRace() {
 
   const addPlayer = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newName.trim() || players.length >= 10) return;
+    if (!newName.trim()) return;
     const nextId = players.length > 0 ? Math.max(...players.map((p) => p.id)) + 1 : 1;
     const nextIdx = players.length;
     setPlayers([
@@ -228,6 +224,13 @@ export default function TossMazeRace() {
       alert("최소 2명의 참가자가 필요합니다.");
       return;
     }
+    
+    // 플레이어 수에 비례하여 미로 크기 동적 확장 (무제한 플레이어 대응)
+    MAZE_WIDTH = Math.max(21, players.length * 2 + 3);
+    if (MAZE_WIDTH % 2 === 0) MAZE_WIDTH += 1;
+    MAZE_HEIGHT = Math.max(31, Math.floor(MAZE_WIDTH * 1.5));
+    if (MAZE_HEIGHT % 2 === 0) MAZE_HEIGHT += 1;
+
     const finalPenaltyCount = Math.min(Math.max(1, penaltyCount), players.length - 1);
     setPenaltyCount(finalPenaltyCount);
     generateMazeAndPaths();
@@ -723,7 +726,7 @@ export default function TossMazeRace() {
                 <button
                   type="button"
                   onClick={addPlayer}
-                  disabled={players.length >= 10 || !newName.trim()}
+                  disabled={!newName.trim()}
                   className="bg-gray-900 text-white px-6 py-3 rounded-lg font-bold disabled:opacity-30 transition hover:bg-black shadow-sm"
                 >
                   추가
