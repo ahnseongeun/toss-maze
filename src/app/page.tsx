@@ -110,42 +110,50 @@ export default function TossMazeRace() {
 
   const handleOpenContacts = async () => {
     try {
-      if (typeof Device !== 'undefined' && Device.getContacts) {
-        // 토스 최신 권한 명세에 따라 전역 requestPermission 먼저 시도
-        if (typeof requestPermission !== 'undefined') {
-          const perm = await requestPermission({ name: "contacts", access: "read" });
-          if (perm !== "allowed") {
-            alert("연락처 접근 권한을 허용해야 친구를 불러올 수 있습니다.");
-            return;
-          }
-        } else if (typeof Device.getContacts.getPermission === 'function') {
-          const currentPerm = await Device.getContacts.getPermission();
-          if (currentPerm !== 'allowed') {
-            const newPerm = await Device.getContacts.openPermissionDialog();
-            if (newPerm !== 'allowed') {
-              alert("연락처 접근 권한을 허용해야 친구를 불러올 수 있습니다.");
-              return;
-            }
-          }
-        }
-
-        const response = await Device.getContacts({ size: 100, offset: 0 });
-        if (response && response.result && Array.isArray(response.result)) {
-          if (response.result.length === 0) {
-            alert("연락처 목록이 비어있습니다.");
-            return;
-          }
-          setContacts(response.result);
-          setShowContactsModal(true);
-        } else {
-          alert("연락처 데이터를 올바르게 불러오지 못했습니다.");
-        }
-      } else {
-        alert("연락처 연동은 토스 최신 앱에서만 가능합니다.");
+      if (typeof Device === 'undefined' || !Device.getContacts) {
+        alert("현재 사용 중인 토스 앱 버전에서는 연락처 연동을 지원하지 않습니다.");
+        return;
       }
+
+      // 1. 전역 requestPermission 시도 (Toss SDK 표준)
+      let permissionGranted = false;
+      if (typeof requestPermission === 'function') {
+        const perm = await requestPermission({ name: 'contacts', access: 'read' });
+        if (perm === 'allowed') permissionGranted = true;
+      }
+
+      // 2. 전역 API가 실패했거나 없으면, Device 객체에 붙은 다이얼로그 호출
+      if (!permissionGranted && typeof Device.getContacts.openPermissionDialog === 'function') {
+        const fallbackPerm = await Device.getContacts.openPermissionDialog();
+        if (fallbackPerm === 'allowed') permissionGranted = true;
+      }
+
+      // 3. 두 가지 방법으로도 권한 획득 실패 시 종료
+      if (!permissionGranted) {
+        alert("연락처 권한이 거부되었습니다. 휴대폰 설정이나 토스 앱 권한을 확인해주세요.");
+        return;
+      }
+
+      // 4. 권한이 확보되었으므로 연락처 가져오기 실행
+      const response = await Device.getContacts({ size: 100, offset: 0 });
+      
+      if (!response || !response.result) {
+        alert("응답에 연락처 데이터가 없습니다. (토스 콘솔에서 권한을 활성화했는지 확인해주세요)");
+        return;
+      }
+
+      if (Array.isArray(response.result) && response.result.length === 0) {
+        alert("기기에 저장된 연락처가 없습니다.");
+        return;
+      }
+
+      setContacts(response.result);
+      setShowContactsModal(true);
+
     } catch (e: any) {
-      alert("연락처를 불러오는 중 오류가 발생했습니다: " + (e?.message || "알 수 없는 오류"));
-      console.warn("연락처 불러오기 에러", e);
+      const errorMsg = e?.message || e?.name || JSON.stringify(e) || "알 수 없는 에러";
+      alert(`[권한/API 에러] 연락처를 불러오지 못했습니다.\n(Toss 디벨로퍼 콘솔의 '권한' 탭에서 연락처 권한이 켜져있는지 꼭 확인하세요!)\n\n상세: ${errorMsg}`);
+      console.warn("연락처 에러:", e);
     }
   };
 
