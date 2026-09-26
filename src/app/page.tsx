@@ -942,9 +942,9 @@ export default function TossMazeRace() {
       
       {/* 연락처 선택 모달 */}
       {showContactsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-4 backdrop-blur-sm">
-          {/* h-[85vh] 제거, 자연스러운 높이 유지하되 최대 높이 제한 */}
-          <div className="bg-white rounded-3xl w-full max-w-sm flex flex-col overflow-hidden shadow-2xl relative my-auto max-h-[85vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 px-3 py-4 backdrop-blur-sm">
+          {/* 가로 너비 확장 (w-[95%] max-w-md), 정중앙 배치(my-auto) */}
+          <div className="bg-white rounded-3xl w-[95%] max-w-md flex flex-col overflow-hidden shadow-2xl relative my-auto max-h-[85vh]">
             
             {/* 헤더 및 검색창 */}
             <div className="p-5 border-b border-gray-100 flex flex-col gap-4 bg-white shrink-0 z-10 relative">
