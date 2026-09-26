@@ -112,9 +112,9 @@ export default function TossMazeRace() {
     try {
       if (typeof Device !== 'undefined' && Device.getContacts) {
         const currentPerm = await Device.getContacts.getPermission();
-        if (currentPerm !== 'granted') {
+        if (currentPerm !== 'allowed') {
           const newPerm = await Device.getContacts.openPermissionDialog();
-          if (newPerm !== 'granted') {
+          if (newPerm !== 'allowed') {
             alert("연락처 접근 권한을 허용해야 친구를 불러올 수 있습니다.");
             return;
           }
