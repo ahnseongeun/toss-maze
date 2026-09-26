@@ -111,24 +111,31 @@ export default function TossMazeRace() {
   const handleOpenContacts = async () => {
     try {
       if (typeof Device !== 'undefined' && Device.getContacts) {
-        const currentPerm = await Device.getContacts.getPermission();
-        if (currentPerm !== 'allowed') {
-          const newPerm = await Device.getContacts.openPermissionDialog();
-          if (newPerm !== 'allowed') {
-            alert("연락처 접근 권한을 허용해야 친구를 불러올 수 있습니다.");
-            return;
+        // 일부 구버전 토스 앱이나 SDK에서는 getPermission이 함수가 아닐 수 있으므로 방어 로직 추가
+        if (typeof Device.getContacts.getPermission === 'function') {
+          const currentPerm = await Device.getContacts.getPermission();
+          if (currentPerm !== 'allowed') {
+            const newPerm = await Device.getContacts.openPermissionDialog();
+            if (newPerm !== 'allowed') {
+              alert("연락처 접근 권한을 허용해야 친구를 불러올 수 있습니다.");
+              return;
+            }
           }
         }
 
         const response = await Device.getContacts({ size: 100, offset: 0 });
-        if (response && response.result) {
+        if (response && response.result && Array.isArray(response.result)) {
+          if (response.result.length === 0) {
+            alert("연락처 목록이 비어있습니다.");
+            return;
+          }
           setContacts(response.result);
           setShowContactsModal(true);
         } else {
-          alert("연락처 목록이 비어있거나 불러오지 못했습니다.");
+          alert("연락처 데이터를 올바르게 불러오지 못했습니다.");
         }
       } else {
-        alert("연락처 연동은 토스 앱에서만 가능합니다.");
+        alert("연락처 연동은 토스 최신 앱에서만 가능합니다.");
       }
     } catch (e: any) {
       alert("연락처를 불러오는 중 오류가 발생했습니다: " + (e?.message || "알 수 없는 오류"));
@@ -593,7 +600,8 @@ export default function TossMazeRace() {
           window.location.href = smsLink;
         }
       } catch (e) {
-        console.warn("SMS link failed", e);
+        window.location.href = smsLink;
+        console.warn("SMS link failed, falling back to window.location", e);
       }
     } else {
       // 전화번호가 없으면 범용 카카오톡/메시지 공유 창 띄우기
