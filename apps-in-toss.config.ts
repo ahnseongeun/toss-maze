@@ -5,6 +5,8 @@ export default defineConfig({
   brand: {
     primaryColor: '#1a1a2e',
   },
-  permissions: [],
+  permissions: [
+    { name: 'contacts', access: 'read' }
+  ],
   webBundleDir: 'out',
 });
