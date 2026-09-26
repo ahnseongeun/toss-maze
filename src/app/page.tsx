@@ -917,17 +917,18 @@ export default function TossMazeRace() {
                 <div className="text-center text-gray-500 py-10">연락처를 불러오지 못했습니다.</div>
               ) : (
                 contacts.map((contact, idx) => (
-                  <button
+                  <div
                     key={idx}
                     onClick={() => addPlayerFromContact(contact)}
-                    className="w-full text-left flex items-center justify-between p-4 rounded-xl border border-gray-200 hover:bg-blue-50 hover:border-blue-200 transition"
+                    className="w-full text-left flex items-center justify-between p-4 rounded-xl border border-gray-200 hover:bg-blue-50 hover:border-blue-200 transition cursor-pointer"
+                    role="button"
                   >
                     <div>
                       <div className="font-bold text-gray-900 text-lg">{contact.name}</div>
                       <div className="text-sm text-gray-500">{contact.phoneNumber}</div>
                     </div>
                     <div className="text-blue-500 font-black">+ 추가</div>
-                  </button>
+                  </div>
                 ))
               )}
             </div>
