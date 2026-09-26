@@ -942,38 +942,39 @@ export default function TossMazeRace() {
       
       {/* 연락처 선택 모달 */}
       {showContactsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 px-3 py-4 backdrop-blur-sm">
-          {/* 가로 너비 확장 (w-[95%] max-w-md), 정중앙 배치(my-auto) */}
-          <div className="bg-white rounded-3xl w-[95%] max-w-md flex flex-col overflow-hidden shadow-2xl relative my-auto max-h-[85vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 px-2 py-4 backdrop-blur-sm">
+          {/* 가로 너비 확장 및 높이 유연화 */}
+          <div className="bg-white rounded-3xl w-[98%] max-w-lg flex flex-col overflow-hidden shadow-2xl relative my-auto">
             
             {/* 헤더 및 검색창 */}
-            <div className="p-5 border-b border-gray-100 flex flex-col gap-4 bg-white shrink-0 z-10 relative">
+            <div className="p-4 border-b border-gray-100 flex flex-col gap-3 bg-white shrink-0 z-10 relative">
               <div className="flex items-center justify-between">
-                <h3 className="font-black text-xl text-gray-900">누구를 추가할까요?</h3>
+                <h3 className="font-black text-xl text-gray-900 tracking-tight">누구를 추가할까요?</h3>
                 <button 
                   onClick={() => { setShowContactsModal(false); setContactSearch(""); }} 
-                  className="text-gray-400 hover:text-gray-900 font-bold transition bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center"
+                  className="text-gray-400 hover:text-gray-900 font-bold transition bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center shrink-0"
                 >
                   ✕
                 </button>
               </div>
               
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+              {/* Flexbox로 검색창 UI 깨짐 방지 */}
+              <div className="flex items-center bg-gray-100 rounded-xl px-3 py-3 focus-within:ring-2 ring-blue-500 transition-all">
+                <span className="text-gray-400 text-lg mr-2 leading-none shrink-0">🔍</span>
                 <input
                   type="text"
-                  placeholder="이름 또는 전화번호 검색"
+                  placeholder="이름이나 번호로 검색"
                   value={contactSearch}
                   onChange={(e) => setContactSearch(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-10 pr-4 text-gray-900 font-medium focus:outline-none focus:border-blue-500 focus:bg-white transition"
+                  className="flex-1 bg-transparent border-none focus:outline-none text-base font-medium text-gray-800 placeholder-gray-400 min-w-0"
                 />
               </div>
             </div>
             
-            {/* 연락처 리스트 (최대 5명 노출, 스크롤 영역 제한) */}
-            <div className="overflow-y-auto p-3 bg-gray-50/50">
+            {/* 연락처 리스트 (5명 정도 보이도록 max-h 지정 후 스크롤) */}
+            <div className="overflow-y-auto bg-gray-50/50 p-2 max-h-[50vh] min-h-[300px]">
               {(() => {
-                const searchTxt = contactSearch.toLowerCase().replace(/\s+/g, ''); // 공백 제거 및 소문자화
+                const searchTxt = contactSearch.toLowerCase().replace(/\s+/g, '');
                 const filtered = contacts.filter(c => {
                   const nameMatch = c.name.toLowerCase().replace(/\s+/g, '').includes(searchTxt);
                   const phoneMatch = c.phoneNumber && c.phoneNumber.replace(/[- ]/g, '').includes(searchTxt);
@@ -993,27 +994,23 @@ export default function TossMazeRace() {
 
                 return (
                   <div className="space-y-2">
-                    {filtered.slice(0, 5).map((contact, idx) => (
+                    {/* 전체 목록 렌더링 후 스크롤 */}
+                    {filtered.map((contact, idx) => (
                       <div
                         key={idx}
                         onClick={() => { addPlayerFromContact(contact); setContactSearch(""); }}
                         className="w-full text-left flex items-center justify-between p-4 rounded-2xl bg-white border border-gray-200 hover:border-blue-400 hover:shadow-md transition active:scale-[0.98] cursor-pointer"
                         role="button"
                       >
-                        <div className="flex flex-col gap-1">
-                          <span className="font-bold text-gray-900 text-lg">{contact.name}</span>
-                          <span className="text-xs text-gray-500 font-medium">{contact.phoneNumber || '전화번호 없음'}</span>
+                        <div className="flex flex-col gap-1 overflow-hidden pr-2">
+                          <span className="font-bold text-gray-900 text-lg truncate">{contact.name}</span>
+                          <span className="text-xs text-gray-500 font-medium truncate">{contact.phoneNumber || '전화번호 없음'}</span>
                         </div>
-                        <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-black text-xl">
+                        <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-black text-xl shrink-0">
                           +
                         </div>
                       </div>
                     ))}
-                    {filtered.length > 5 && (
-                      <div className="text-center py-3 text-xs font-bold text-gray-400">
-                        결과가 더 있습니다. 검색어로 찾아주세요!
-                      </div>
-                    )}
                   </div>
                 );
               })()}
