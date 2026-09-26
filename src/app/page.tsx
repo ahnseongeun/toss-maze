@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { TossAds, loadFullScreenAd, showFullScreenAd, graniteEvent, Screen, Share, Device, openURL } from '@apps-in-toss/web-framework';
+import { TossAds, loadFullScreenAd, showFullScreenAd, graniteEvent, Screen, Share, Device, openURL, requestPermission } from '@apps-in-toss/web-framework';
 
 // TODO: 토스에서 발급받은 실제 광고 ID(AdGroupId)로 변경해주세요.
 const TOSS_AD_BANNER_ID = "TEST_BANNER_ID"; 
@@ -111,8 +111,14 @@ export default function TossMazeRace() {
   const handleOpenContacts = async () => {
     try {
       if (typeof Device !== 'undefined' && Device.getContacts) {
-        // 일부 구버전 토스 앱이나 SDK에서는 getPermission이 함수가 아닐 수 있으므로 방어 로직 추가
-        if (typeof Device.getContacts.getPermission === 'function') {
+        // 토스 최신 권한 명세에 따라 전역 requestPermission 먼저 시도
+        if (typeof requestPermission !== 'undefined') {
+          const perm = await requestPermission({ name: "contacts", access: "read" });
+          if (perm !== "allowed") {
+            alert("연락처 접근 권한을 허용해야 친구를 불러올 수 있습니다.");
+            return;
+          }
+        } else if (typeof Device.getContacts.getPermission === 'function') {
           const currentPerm = await Device.getContacts.getPermission();
           if (currentPerm !== 'allowed') {
             const newPerm = await Device.getContacts.openPermissionDialog();
