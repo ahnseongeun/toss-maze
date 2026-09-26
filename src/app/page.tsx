@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { TossAds, loadFullScreenAd, showFullScreenAd, graniteEvent, Screen } from '@apps-in-toss/web-framework';
+import { TossAds, loadFullScreenAd, showFullScreenAd, graniteEvent, Screen, Share } from '@apps-in-toss/web-framework';
 
 // TODO: 토스에서 발급받은 실제 광고 ID(AdGroupId)로 변경해주세요.
 const TOSS_AD_BANNER_ID = "TEST_BANNER_ID"; 
@@ -44,6 +44,9 @@ export default function TossMazeRace() {
   const [leaderboard, setLeaderboard] = useState<{id: number, time: number}[]>([]);
   const [penaltyCount, setPenaltyCount] = useState(1);
   const [isSlowMotion, setIsSlowMotion] = useState(false);
+  
+  const [totalAmount, setTotalAmount] = useState<number | "">("");
+  const [payerId, setPayerId] = useState<number | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | null>(null);
@@ -507,6 +510,33 @@ export default function TossMazeRace() {
     }
   };
 
+  const handleRequestDutchPay = () => {
+    if (!totalAmount || payerId === null) return;
+    
+    const payer = players.find(p => p.id === payerId);
+    if (!payer) return;
+
+    // Get losers
+    const loserIds = ranks.slice(-penaltyCount);
+    const losers = players.filter(p => loserIds.includes(p.id));
+    
+    // Calculate split
+    const splitAmount = Math.ceil(Number(totalAmount) / penaltyCount);
+    const loserNames = losers.map(l => l.name).join(', ');
+
+    const message = `[낼래말래 미로] 벌칙 당첨! 🎯\n\n당첨자: ${loserNames}\n\n결제자 '${payer.name}'님에게 각각 ${splitAmount.toLocaleString()}원씩 송금해주세요!💸\n👉 송금하기: https://toss.me/`;
+
+    try {
+      if (typeof Share !== "undefined") {
+        Share.sendMessage({ message }).catch(e => console.warn("Share failed", e));
+      } else {
+        alert(message);
+      }
+    } catch (e) {
+      console.warn("Share error", e);
+    }
+  };
+
   const handlePlayAgain = () => {
     if (!TOSS_AD_FULLSCREEN_ID || TOSS_AD_FULLSCREEN_ID === "TEST_FULLSCREEN_ID") {
       changeView("input", true);
@@ -704,9 +734,55 @@ export default function TossMazeRace() {
                 })}
               </div>
 
+              {/* N빵 정산 영역 */}
+              <div className="w-full max-w-sm bg-blue-50 rounded-2xl p-5 mb-8 border border-blue-100 shadow-sm">
+                <h3 className="text-lg font-black text-blue-900 mb-4 text-center">💸 벌칙 정산하기</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-bold text-blue-800 mb-1">총 결제 금액</label>
+                    <input 
+                      type="number"
+                      value={totalAmount}
+                      onChange={(e) => setTotalAmount(e.target.value ? Number(e.target.value) : "")}
+                      placeholder="얼마가 나왔나요? (예: 50000)"
+                      className="w-full px-4 py-3 rounded-xl border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-black bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-blue-800 mb-1">결제자 (돈 받을 사람)</label>
+                    <select
+                      value={payerId ?? ""}
+                      onChange={(e) => setPayerId(e.target.value ? Number(e.target.value) : null)}
+                      className="w-full px-4 py-3 rounded-xl border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-black appearance-none bg-white"
+                    >
+                      <option value="" disabled>결제자를 선택해주세요</option>
+                      {players.map(p => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  {totalAmount !== "" && payerId !== null && (
+                    <div className="pt-2 animate-fade-in-up">
+                      <div className="text-center mb-3">
+                        <span className="text-sm text-blue-600 font-bold">
+                          당첨자 1인당 송금액: <span className="text-lg text-blue-700">{Math.ceil(Number(totalAmount) / penaltyCount).toLocaleString()}원</span>
+                        </span>
+                      </div>
+                      <button 
+                        onClick={handleRequestDutchPay}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-6 rounded-2xl shadow-md transition-transform active:scale-95 text-lg"
+                      >
+                        N빵 요청하기 (공유) 💬
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <button
                 onClick={handlePlayAgain}
-                className="w-full max-w-sm bg-gray-900 text-white py-4 rounded-xl font-bold text-lg hover:bg-black transition active:scale-95 shadow-md shrink-0"
+                className="w-full max-w-sm bg-gray-900 text-white py-4 rounded-xl font-bold text-lg hover:bg-black transition active:scale-95 shadow-md shrink-0 mb-6"
               >
                 다시 하기
               </button>
