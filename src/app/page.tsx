@@ -943,8 +943,8 @@ export default function TossMazeRace() {
       {/* 연락처 선택 모달 */}
       {showContactsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 px-2 py-4 backdrop-blur-sm">
-          {/* 가로 너비 확장 및 높이 유연화 */}
-          <div className="bg-white rounded-3xl w-[98%] max-w-lg flex flex-col overflow-hidden shadow-2xl relative my-auto">
+          {/* 가로 너비 꽉 채우고, my-auto 제거 후 부모 높이 제한(max-h-[85vh]) 부여 */}
+          <div className="bg-white rounded-3xl w-full max-w-lg flex flex-col overflow-hidden shadow-2xl relative max-h-[85vh]">
             
             {/* 헤더 및 검색창 */}
             <div className="p-4 border-b border-gray-100 flex flex-col gap-3 bg-white shrink-0 z-10 relative">
@@ -971,8 +971,11 @@ export default function TossMazeRace() {
               </div>
             </div>
             
-            {/* 연락처 리스트 (5명 정도 보이도록 max-h 지정 후 스크롤) */}
-            <div className="overflow-y-auto bg-gray-50/50 p-2 max-h-[50vh] min-h-[300px]">
+            {/* 연락처 리스트: 정확히 5명 분량의 높이(430px) 지정 및 스크롤 완벽 보장 */}
+            <div 
+              className="overflow-y-auto bg-gray-50/50 p-2 flex-1 touch-pan-y overscroll-contain"
+              style={{ maxHeight: '430px' }}
+            >
               {(() => {
                 const searchTxt = contactSearch.toLowerCase().replace(/\s+/g, '');
                 const filtered = contacts.filter(c => {
