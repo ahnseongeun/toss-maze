@@ -943,15 +943,16 @@ export default function TossMazeRace() {
       {/* 연락처 선택 모달 */}
       {showContactsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl w-full max-w-sm flex flex-col overflow-hidden h-[85vh] shadow-2xl relative">
+          {/* h-[85vh] 제거, 자연스러운 높이 유지하되 최대 높이 제한 */}
+          <div className="bg-white rounded-3xl w-full max-w-sm flex flex-col overflow-hidden shadow-2xl relative my-auto max-h-[85vh]">
             
             {/* 헤더 및 검색창 */}
-            <div className="p-4 border-b border-gray-100 flex flex-col gap-4 bg-white shrink-0 z-10 relative shadow-sm">
+            <div className="p-5 border-b border-gray-100 flex flex-col gap-4 bg-white shrink-0 z-10 relative">
               <div className="flex items-center justify-between">
                 <h3 className="font-black text-xl text-gray-900">누구를 추가할까요?</h3>
                 <button 
                   onClick={() => { setShowContactsModal(false); setContactSearch(""); }} 
-                  className="text-gray-400 hover:text-gray-900 font-bold p-2 transition bg-gray-50 rounded-full w-8 h-8 flex items-center justify-center"
+                  className="text-gray-400 hover:text-gray-900 font-bold transition bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center"
                 >
                   ✕
                 </button>
@@ -969,35 +970,51 @@ export default function TossMazeRace() {
               </div>
             </div>
             
-            {/* 연락처 리스트 (스크롤 영역) */}
-            <div className="flex-1 overflow-y-auto p-2 bg-gray-50/50 overscroll-contain">
-              {contacts.filter(c => c.name.includes(contactSearch) || (c.phoneNumber && c.phoneNumber.replace(/-/g, '').includes(contactSearch.replace(/-/g, '')))).length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2 min-h-[200px]">
-                  <span className="text-4xl">📭</span>
-                  <span className="font-medium">{contacts.length === 0 ? '연락처를 불러오지 못했습니다.' : '검색 결과가 없습니다.'}</span>
-                </div>
-              ) : (
-                <div className="space-y-2 p-2">
-                  {contacts
-                    .filter(c => c.name.includes(contactSearch) || (c.phoneNumber && c.phoneNumber.replace(/-/g, '').includes(contactSearch.replace(/-/g, ''))))
-                    .map((contact, idx) => (
-                    <div
-                      key={idx}
-                      onClick={() => { addPlayerFromContact(contact); setContactSearch(""); }}
-                      className="w-full text-left flex items-center justify-between p-4 rounded-2xl bg-white border border-gray-100 hover:border-blue-300 hover:shadow-md transition cursor-pointer group"
-                      role="button"
-                    >
-                      <div className="flex flex-col gap-1">
-                        <span className="font-bold text-gray-900 text-lg group-hover:text-blue-600 transition-colors">{contact.name}</span>
-                        <span className="text-xs text-gray-500 font-medium">{contact.phoneNumber || '전화번호 없음'}</span>
-                      </div>
-                      <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-black text-xl group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                        +
-                      </div>
+            {/* 연락처 리스트 (최대 5명 노출, 스크롤 영역 제한) */}
+            <div className="overflow-y-auto p-3 bg-gray-50/50">
+              {(() => {
+                const filtered = contacts.filter(c => 
+                  c.name.includes(contactSearch) || 
+                  (c.phoneNumber && c.phoneNumber.replace(/-/g, '').includes(contactSearch.replace(/-/g, '')))
+                );
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-10 text-gray-400 gap-2">
+                      <span className="text-4xl">📭</span>
+                      <span className="font-medium text-sm">
+                        {contacts.length === 0 ? '불러온 연락처가 없습니다.' : '검색 결과가 없습니다.'}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              )}
+                  );
+                }
+
+                return (
+                  <div className="space-y-2">
+                    {filtered.slice(0, 5).map((contact, idx) => (
+                      <div
+                        key={idx}
+                        onClick={() => { addPlayerFromContact(contact); setContactSearch(""); }}
+                        className="w-full text-left flex items-center justify-between p-4 rounded-2xl bg-white border border-gray-200 hover:border-blue-400 hover:shadow-md transition active:scale-[0.98] cursor-pointer"
+                        role="button"
+                      >
+                        <div className="flex flex-col gap-1">
+                          <span className="font-bold text-gray-900 text-lg">{contact.name}</span>
+                          <span className="text-xs text-gray-500 font-medium">{contact.phoneNumber || '전화번호 없음'}</span>
+                        </div>
+                        <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-black text-xl">
+                          +
+                        </div>
+                      </div>
+                    ))}
+                    {filtered.length > 5 && (
+                      <div className="text-center py-3 text-xs font-bold text-gray-400">
+                        결과가 더 있습니다. 검색어로 찾아주세요!
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
