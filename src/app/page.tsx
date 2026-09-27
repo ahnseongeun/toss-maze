@@ -47,6 +47,7 @@ export default function TossMazeRace() {
   const [isSlowMotion, setIsSlowMotion] = useState(false);
   
   const [totalAmount, setTotalAmount] = useState<number | "">("");
+  const [tossId, setTossId] = useState<string>("");
   const [payerId, setPayerId] = useState<number | null>(null);
   
   const [contacts, setContacts] = useState<{name: string, phoneNumber: string}[]>([]);
@@ -616,7 +617,8 @@ export default function TossMazeRace() {
     const splitAmount = Math.ceil(Number(totalAmount) / penaltyCount);
     const loserNames = losers.map(l => l.name).join(', ');
 
-    const message = `[낼래말래 미로] 벌칙 당첨! 🎯\n\n당첨자: ${loserNames}\n\n결제자 '${payer.name}'님에게 각각 ${splitAmount.toLocaleString()}원씩 송금해주세요!💸\n👉 송금하기: https://toss.me/`;
+    const tossLink = tossId.trim() ? `https://toss.me/${tossId.trim()}` : payer.phoneNumber ? `(연락처: ${payer.phoneNumber})` : "";
+    const message = `[낼래말래 미로] 벌칙 당첨! 🎯\n\n당첨자: ${loserNames}\n\n결제자 '${payer.name}'님에게 각각 ${splitAmount.toLocaleString()}원씩 송금해주세요!💸${tossLink ? `\n👉 송금: ${tossLink}` : ""}`;
 
     const loserPhones = losers.map(l => l.phoneNumber).filter(phone => !!phone);
     
@@ -893,6 +895,17 @@ export default function TossMazeRace() {
                           당첨자 1인당 송금액: <span className="text-lg text-blue-700">{Math.ceil(Number(totalAmount) / penaltyCount).toLocaleString()}원</span>
                         </span>
                       </div>
+                      <div className="mb-4">
+                        <input
+                          type="text"
+                          placeholder="결제자의 토스 아이디 (선택)"
+                          value={tossId}
+                          onChange={(e) => setTossId(e.target.value)}
+                          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:border-blue-500"
+                        />
+                        <p className="text-xs text-gray-400 mt-1 px-1">입력 시 송금 링크(toss.me/아이디)가 문자에 포함됩니다.</p>
+                      </div>
+
                       <button 
                         onClick={handleRequestDutchPay}
                         className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-6 rounded-2xl shadow-md transition-transform active:scale-95 text-lg"
