@@ -617,7 +617,7 @@ export default function TossMazeRace() {
     const splitAmount = Math.ceil(Number(totalAmount) / penaltyCount);
     const loserNames = losers.map(l => l.name).join(', ');
 
-    const tossLink = tossId.trim() ? `https://toss.me/${tossId.trim()}` : payer.phoneNumber ? `(연락처: ${payer.phoneNumber})` : "";
+    const tossLink = tossId.trim() ? `https://toss.me/${tossId.trim()}` : "";
     const message = `[낼래말래 미로] 벌칙 당첨! 🎯\n\n당첨자: ${loserNames}\n\n결제자 '${payer.name}'님에게 각각 ${splitAmount.toLocaleString()}원씩 송금해주세요!💸${tossLink ? `\n👉 송금: ${tossLink}` : ""}`;
 
     if (shareType === "sms") {
