@@ -603,7 +603,7 @@ export default function TossMazeRace() {
     }
   };
 
-  const handleRequestDutchPay = () => {
+  const handleRequestDutchPay = (shareType: "sms" | "share") => {
     if (!totalAmount || payerId === null) return;
     
     const payer = players.find(p => p.id === payerId);
@@ -620,34 +620,38 @@ export default function TossMazeRace() {
     const tossLink = tossId.trim() ? `https://toss.me/${tossId.trim()}` : payer.phoneNumber ? `(연락처: ${payer.phoneNumber})` : "";
     const message = `[낼래말래 미로] 벌칙 당첨! 🎯\n\n당첨자: ${loserNames}\n\n결제자 '${payer.name}'님에게 각각 ${splitAmount.toLocaleString()}원씩 송금해주세요!💸${tossLink ? `\n👉 송금: ${tossLink}` : ""}`;
 
-    const loserPhones = losers.map(l => l.phoneNumber).filter(phone => !!phone);
-    
-    if (loserPhones.length > 0) {
-      // 당첨자 중 전화번호가 있는 경우 다중 문자 메시지 앱 호출
-      const phoneString = loserPhones.join(',');
-      const encodedMessage = encodeURIComponent(message);
-      const smsLink = `sms:${phoneString}?body=${encodedMessage}`;
-      
-      try {
-        if (typeof openURL !== 'undefined') {
-          openURL(smsLink).catch(() => { window.location.href = smsLink; });
-        } else {
+    if (shareType === "sms") {
+      const loserPhones = losers.map(l => l.phoneNumber).filter(phone => !!phone);
+      if (loserPhones.length > 0) {
+        const phoneString = loserPhones.join(',');
+        const encodedMessage = encodeURIComponent(message);
+        const smsLink = `sms:${phoneString}?body=${encodedMessage}`;
+        
+        try {
+          if (typeof openURL !== 'undefined') {
+            openURL(smsLink).catch(() => { window.location.href = smsLink; });
+          } else {
+            window.location.href = smsLink;
+          }
+        } catch (e) {
           window.location.href = smsLink;
+          console.warn("SMS link failed, falling back to window.location", e);
         }
-      } catch (e) {
-        window.location.href = smsLink;
-        console.warn("SMS link failed, falling back to window.location", e);
+      } else {
+        alert("당첨자들의 전화번호 정보가 없습니다. 카카오톡 공유를 이용해주세요.");
       }
-    } else {
-      // 전화번호가 없으면 범용 카카오톡/메시지 공유 창 띄우기
+    } else if (shareType === "share") {
       try {
-        if (typeof Share !== "undefined") {
+        if (typeof Share !== "undefined" && typeof Share.sendMessage === "function") {
           Share.sendMessage({ message }).catch(e => console.warn("Share failed", e));
+        } else if (typeof navigator !== "undefined" && navigator.share) {
+          navigator.share({ text: message }).catch(() => alert(message));
         } else {
           alert(message);
         }
       } catch (e) {
         console.warn("Share error", e);
+        alert(message);
       }
     }
   };
@@ -906,12 +910,20 @@ export default function TossMazeRace() {
                         <p className="text-xs text-gray-400 mt-1 px-1">입력 시 송금 링크(toss.me/아이디)가 문자에 포함됩니다.</p>
                       </div>
 
-                      <button 
-                        onClick={handleRequestDutchPay}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-6 rounded-2xl shadow-md transition-transform active:scale-95 text-lg"
-                      >
-                        N빵 요청하기 (공유) 💬
-                      </button>
+                      <div className="flex flex-col gap-2">
+                        <button 
+                          onClick={() => handleRequestDutchPay("sms")}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-6 rounded-2xl shadow-md transition-transform active:scale-95 text-lg"
+                        >
+                          문자로 N빵 요청하기 💬
+                        </button>
+                        <button 
+                          onClick={() => handleRequestDutchPay("share")}
+                          className="w-full bg-[#FEE500] hover:bg-[#FADA0A] text-gray-900 font-black py-4 px-6 rounded-2xl shadow-md transition-transform active:scale-95 text-lg"
+                        >
+                          카톡 / 다른 앱으로 공유하기 🔗
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
