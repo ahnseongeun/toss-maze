@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { graniteEvent, Screen, Share, Device, openURL, requestPermission } from '@apps-in-toss/web-framework';
+import { graniteEvent, Screen, Share, Device, requestPermission } from '@apps-in-toss/web-framework';
 
 const EMOJIS = ["🐶", "🐱", "🦊", "🐻", "🐼", "🐯", "🦁", "🐸", "🐰", "🐹"];
 const COLORS = [
@@ -43,8 +43,6 @@ export default function TossMazeRace() {
   const [isSlowMotion, setIsSlowMotion] = useState(false);
   
   const [totalAmount, setTotalAmount] = useState<number | "">("");
-  const [tossId, setTossId] = useState<string>("");
-  const [payerId, setPayerId] = useState<number | null>(null);
   
   const [contacts, setContacts] = useState<{name: string, phoneNumber: string}[]>([]);
   const [showContactsModal, setShowContactsModal] = useState(false);
@@ -585,68 +583,31 @@ export default function TossMazeRace() {
     }
   };
 
-  const handleRequestDutchPay = (shareType: "sms" | "share") => {
-    if (!totalAmount || payerId === null) return;
-    
-    const payer = players.find(p => p.id === payerId);
-    if (!payer) return;
+  const handleRequestDutchPay = () => {
+    if (!totalAmount) return;
 
-    // Get losers (결제자 본인이 당첨자인 경우 본인에게 송금할 필요는 없으므로 제외)
+    // Get losers
     const loserIds = ranks.slice(-penaltyCount);
-    const losers = players.filter(p => loserIds.includes(p.id) && p.id !== payer.id);
+    const losers = players.filter(p => loserIds.includes(p.id));
+    if (losers.length === 0) return;
 
-    if (losers.length === 0) {
-      alert("결제자 본인 외에 송금할 당첨자가 없습니다.");
-      return;
-    }
-    
-    // Calculate split (1인당 금액은 전체 당첨자 수 기준)
+    // Calculate split
     const splitAmount = Math.ceil(Number(totalAmount) / penaltyCount);
     const loserNames = losers.map(l => l.name).join(', ');
 
-    const tossLink = tossId.trim() ? `https://toss.me/${tossId.trim()}` : "";
-    const message = `[낼래말래 미로] 벌칙 당첨! 🎯\n\n당첨자: ${loserNames}\n\n결제자 '${payer.name}'님에게 각각 ${splitAmount.toLocaleString()}원씩 송금해주세요!💸${tossLink ? `\n👉 송금: ${tossLink}` : ""}`;
+    const message = `[낼래말래 미로] 벌칙 당첨! 🎯\n\n당첨자: ${loserNames}\n\n1인당 ${splitAmount.toLocaleString()}원씩 보내주세요! 💸`;
 
-    if (shareType === "sms") {
-      const loserPhones = losers.map(l => l.phoneNumber).filter(phone => !!phone);
-      const noPhoneCount = losers.length - loserPhones.length;
-      
-      if (loserPhones.length === 0) {
-        alert("당첨자들의 전화번호가 없어 문자를 보낼 수 없습니다. 카톡 공유를 이용해주세요.");
-        return;
-      }
-      
-      if (noPhoneCount > 0) {
-        const proceed = confirm(`수기 입력된 ${noPhoneCount}명은 번호가 없어 문자가 가지 않습니다. 계속하시겠습니까?`);
-        if (!proceed) return;
-      }
-
-      const phoneString = loserPhones.join(',');
-      const encodedMessage = encodeURIComponent(message);
-      const smsLink = `sms:${phoneString}?body=${encodedMessage}`;
-      
-      try {
-        if (typeof openURL !== 'undefined') {
-          openURL(smsLink).catch(() => { window.location.href = smsLink; });
-        } else {
-          window.location.href = smsLink;
-        }
-      } catch (e) {
-        window.location.href = smsLink;
-      }
-    } else {
-      try {
-        if (typeof Share !== "undefined" && typeof Share.sendMessage === "function") {
-          Share.sendMessage({ message }).catch(e => console.warn("Share failed", e));
-        } else if (typeof navigator !== "undefined" && navigator.share) {
-          navigator.share({ text: message }).catch(() => alert(message));
-        } else {
-          alert(message);
-        }
-      } catch (e) {
-        console.warn("Share error", e);
+    try {
+      if (typeof Share !== "undefined" && typeof Share.sendMessage === "function") {
+        Share.sendMessage({ message }).catch(e => console.warn("Share failed", e));
+      } else if (typeof navigator !== "undefined" && navigator.share) {
+        navigator.share({ text: message }).catch(() => alert(message));
+      } else {
         alert(message);
       }
+    } catch (e) {
+      console.warn("Share error", e);
+      alert(message);
     }
   };
 
@@ -832,52 +793,21 @@ export default function TossMazeRace() {
                       className="w-full px-4 py-3 rounded-xl border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-black bg-white"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-bold text-blue-800 mb-1">결제자 (돈 받을 사람)</label>
-                    <select
-                      value={payerId ?? ""}
-                      onChange={(e) => setPayerId(e.target.value ? Number(e.target.value) : null)}
-                      className="w-full px-4 py-3 rounded-xl border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-black appearance-none bg-white"
-                    >
-                      <option value="" disabled>결제자를 선택해주세요</option>
-                      {players.map(p => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
-                    </select>
-                  </div>
                   
-                  {totalAmount !== "" && payerId !== null && (
+                  {totalAmount !== "" && (
                     <div className="pt-2 animate-fade-in-up">
                       <div className="text-center mb-3">
                         <span className="text-sm text-blue-600 font-bold">
                           당첨자 1인당 송금액: <span className="text-lg text-blue-700">{Math.ceil(Number(totalAmount) / penaltyCount).toLocaleString()}원</span>
                         </span>
                       </div>
-                      <div className="mb-4">
-                        <input
-                          type="text"
-                          placeholder="결제자의 토스 아이디 (선택)"
-                          value={tossId}
-                          onChange={(e) => setTossId(e.target.value)}
-                          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:border-blue-500"
-                        />
-                        <p className="text-xs text-gray-400 mt-1 px-1">입력 시 송금 링크(toss.me/아이디)가 문자에 포함됩니다.</p>
-                      </div>
 
-                      <div className="flex flex-col gap-2">
-                        <button 
-                          onClick={() => handleRequestDutchPay("sms")}
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-6 rounded-2xl shadow-md transition-transform active:scale-95 text-lg"
-                        >
-                          문자로 N빵 요청하기 💬
-                        </button>
-                        <button 
-                          onClick={() => handleRequestDutchPay("share")}
-                          className="w-full bg-[#FEE500] hover:bg-[#FADA0A] text-gray-900 font-black py-4 px-6 rounded-2xl shadow-md transition-transform active:scale-95 text-lg"
-                        >
-                          카톡 / 다른 앱으로 공유하기 🔗
-                        </button>
-                      </div>
+                      <button 
+                        onClick={handleRequestDutchPay}
+                        className="w-full bg-[#FEE500] hover:bg-[#FADA0A] text-gray-900 font-black py-4 px-6 rounded-2xl shadow-md transition-transform active:scale-95 text-lg"
+                      >
+                        카톡 / 메신저로 N빵 요청하기 💬
+                      </button>
                     </div>
                   )}
                 </div>
