@@ -1,11 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { TossAds, loadFullScreenAd, showFullScreenAd, graniteEvent, Screen, Share, Device, openURL, requestPermission } from '@apps-in-toss/web-framework';
-
-// TODO: 토스에서 발급받은 실제 광고 ID(AdGroupId)로 변경해주세요.
-const TOSS_AD_BANNER_ID = "TEST_BANNER_ID"; 
-const TOSS_AD_FULLSCREEN_ID = "TEST_FULLSCREEN_ID";
+import { graniteEvent, Screen, Share, Device, openURL, requestPermission } from '@apps-in-toss/web-framework';
 
 const EMOJIS = ["🐶", "🐱", "🦊", "🐻", "🐼", "🐯", "🦁", "🐸", "🐰", "🐹"];
 const COLORS = [
@@ -583,20 +579,6 @@ export default function TossMazeRace() {
     });
   }, [view, maze, playerPositions, players]);
 
-  useEffect(() => {
-    // 뷰가 input이나 result일 때 하단 배너 노출
-    if (view === "input" || view === "result") {
-      if (!TOSS_AD_BANNER_ID || TOSS_AD_BANNER_ID === "TEST_BANNER_ID") return;
-      try {
-        if (typeof TossAds !== "undefined" && TossAds.attachBanner.isSupported()) {
-          TossAds.attachBanner(TOSS_AD_BANNER_ID, "#toss-ad-banner");
-        }
-      } catch (e) {
-        console.warn("TossAds banner load failed", e);
-      }
-    }
-  }, [view]);
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
       addPlayer(e as any);
@@ -669,46 +651,6 @@ export default function TossMazeRace() {
   };
 
   const handlePlayAgain = () => {
-    if (!TOSS_AD_FULLSCREEN_ID || TOSS_AD_FULLSCREEN_ID === "TEST_FULLSCREEN_ID") {
-      changeView("input", true);
-      setPenaltyCount(1);
-      return;
-    }
-
-    try {
-      if (typeof loadFullScreenAd !== "undefined" && loadFullScreenAd.isSupported()) {
-        loadFullScreenAd({
-          options: { adGroupId: TOSS_AD_FULLSCREEN_ID },
-          onEvent: (event) => {
-            if (event.type === "loaded") {
-              showFullScreenAd({
-                options: { adGroupId: TOSS_AD_FULLSCREEN_ID },
-                onEvent: (e) => {
-                  if (e.type === "dismissed" || e.type === "failedToShow" || e.type === "userEarnedReward") {
-                    changeView("input", true);
-                    setPenaltyCount(1);
-                  }
-                },
-                onError: () => {
-                  changeView("input", true);
-                  setPenaltyCount(1);
-                }
-              });
-            }
-          },
-          onError: (e) => {
-            console.warn("Full screen ad load failed", e);
-            changeView("input", true);
-            setPenaltyCount(1);
-          }
-        });
-        return; // 광고가 성공적으로 띄워질 예정이므로 여기서 종료
-      }
-    } catch (e) {
-      console.warn("Full screen ad error", e);
-    }
-    
-    // 광고가 지원되지 않거나 에러 시 바로 넘김
     changeView("input", true);
     setPenaltyCount(1);
   };
@@ -947,12 +889,6 @@ export default function TossMazeRace() {
               >
                 다시 하기
               </button>
-            </div>
-          )}
-
-          {/* 하단 배너 광고 영역 (대기실, 결과 화면에서 노출) */}
-          {(view === "input" || view === "result") && TOSS_AD_BANNER_ID && TOSS_AD_BANNER_ID !== "TEST_BANNER_ID" && (
-            <div id="toss-ad-banner" className="w-full shrink-0 flex items-center justify-center min-h-[60px] bg-gray-50 border-t border-gray-200">
             </div>
           )}
         </div>
