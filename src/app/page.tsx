@@ -609,11 +609,16 @@ export default function TossMazeRace() {
     const payer = players.find(p => p.id === payerId);
     if (!payer) return;
 
-    // Get losers
+    // Get losers (결제자 본인이 당첨자인 경우 본인에게 송금할 필요는 없으므로 제외)
     const loserIds = ranks.slice(-penaltyCount);
-    const losers = players.filter(p => loserIds.includes(p.id));
+    const losers = players.filter(p => loserIds.includes(p.id) && p.id !== payer.id);
+
+    if (losers.length === 0) {
+      alert("결제자 본인 외에 송금할 당첨자가 없습니다.");
+      return;
+    }
     
-    // Calculate split
+    // Calculate split (1인당 금액은 전체 당첨자 수 기준)
     const splitAmount = Math.ceil(Number(totalAmount) / penaltyCount);
     const loserNames = losers.map(l => l.name).join(', ');
 
